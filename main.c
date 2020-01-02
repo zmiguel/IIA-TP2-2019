@@ -7,6 +7,7 @@
 
 int main(int argc, char *argv[]){
     int opt1=0, sair=0;
+    char ficheiro[100],nitr[9];
 
     printf("IIA TP2\n\n");
 
@@ -16,13 +17,25 @@ int main(int argc, char *argv[]){
         switch (opt1)
         {
         case 1://pesquisa local
-            execlp("pLocal","./pLocal","filename_goes_here","number os runs goes here", (char *) NULL);
+            printf("Indique o nome do ficheiro: ");
+            scanf("%s",&ficheiro);
+            printf("Indique o numero de iterações: ");
+            scanf("%s",&nitr);
+            execl("pLocal","./pLocal",ficheiro, nitr, (char *) NULL);
             break;
         case 2://pesquisa evolutiva
-
+            printf("Indique o nome do ficheiro: ");
+            scanf("%s",&ficheiro);
+            printf("Indique o numero de iterações: ");
+            scanf("%s",&nitr);
+            execl("pEvol","./pLocal",ficheiro, nitr, (char *) NULL);
             break;
         case 3://pesquisa hybrida
-            
+            printf("Indique o nome do ficheiro: ");
+            scanf("%s",&ficheiro);
+            printf("Indique o numero de iterações: ");
+            scanf("%s",&nitr);
+            execl("pHybrid","./pLocal",ficheiro, nitr, (char *) NULL);
             break;
         case 9://sair
             sair = 1;

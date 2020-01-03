@@ -13,11 +13,19 @@ int main(int argc, char *argv[]){
 	chrom       best_run, best_ever;
 	int         gen_actual, r, runs, i, inv, mat[MAX_OBJ][MAX_OBJ];
 	float       mbf = 0.0;
-    int         opt1=0, opt2=0;
+    int         opt1=0, tofile=0;
 
-    if(argc != 3){
-        printf("ERRO: numero de argumentos inválido\n%s <nome_ficheiro> <iteracoes>\n",argv[0]);
+    if(argc <= 3){
+        printf("ERRO: numero de argumentos inválido\n%s <nome_ficheiro> <iteracoes> [opt] [tofile (1)]\n",argv[0]);
         exit(1);
+    }
+
+	if(argc == 4){
+        opt1 = atoi(argv[3]);
+    }
+    if(argc == 5){
+        opt1 = atoi(argv[3]);
+        tofile=1;
     }
 
     strcpy(ficheiro,argv[1]);
@@ -33,14 +41,6 @@ int main(int argc, char *argv[]){
         printf("2 - Reparacao 1\n");
         printf("3 - Reparacao 2\n");
         scanf("%d", &opt1);
-    }
-    fflush(stdin);
-    while(opt2 <= 0 || opt2 >3){
-        printf("\nEscolha o operador genetico:\n");
-        printf("1 - Recombinacao 1 ponto\n");
-        printf("2 - Recombinacao 2 pontos\n");
-        printf("3 - Recombinacao Uniforme\n");
-        scanf("%d", &opt2);
     }
 
     for (r=0; r<runs; r++){
@@ -82,15 +82,7 @@ int main(int argc, char *argv[]){
             // Exercício 4.5
             // tournament_geral(pop, EA_param, parents);
             // Aplica os operadores genéticos aos pais (os descendentes ficam armazenados na estrutura pop)
-			if (opt2 == 1){
 			genetic_operators(parents, EA_param, pop);
-			}else if (opt2 == 2){
-			genetic_operators2(parents, EA_param, pop);
-			}else if (opt2 == 3){
-			genetic_operators3(parents, EA_param, pop);
-			}else{
-				printf("Erro na selecao de operador genetico\n");
-			}
 
             // Avalia a nova população (a dos filhos)
 			if (opt1 == 1){
@@ -128,9 +120,23 @@ int main(int argc, char *argv[]){
 		free(pop);
 	}
 	// Escreve resultados globais
-	printf("\n\nMBF: %f\n", mbf/r);
-	printf("\nMelhor solucao encontrada");
-	write_best_evol(best_ever, EA_param);
+	if(tofile==1){
+		char fname[100];
+        sprintf(fname,"./out/pEvol_%sitt_%s_opt%d",argv[2],argv[1],opt1);
+        FILE *f;
+        f = fopen(fname,"wt");
+        if(f==NULL){
+            printf("nao abri o ficheiro\n");
+        }
+		fprintf(f,"\n\nMBF: %f\n", mbf/r);
+		fprintf(f,"\nBest individual: %4.1f\n", best_ever.fitness);
+		fclose(f);
+	}else{
+		printf("\n\nMBF: %f\n", mbf/r);
+		printf("\nMelhor solucao encontrada");
+		write_best_evol(best_ever, EA_param);
+	}
+	
 	return 0;
 }
 
@@ -152,13 +158,13 @@ float eval_individual_penalizado(int sol[], struct info_evol d, int mat[][MAX_OB
         }
     }
 
-	if (max <= 0)
+	if (max >= d.numGenes)
 	{
         // Solução inválida
 		*v = 0;
         //return -total; // Solucao com penalização
-		return 0;
-        //return max-d.ar*d.ro; // Solucao com penalização
+		//return 0;
+        return -(max-d.ar*d.ro); // Solucao com penalização
 	}
 	else
 	{
@@ -169,77 +175,83 @@ float eval_individual_penalizado(int sol[], struct info_evol d, int mat[][MAX_OB
 }
 
 float eval_individual_reparado1(int sol[], struct info_evol d, int mat[][MAX_OBJ], int *v){
-	int     i;
+	int     i, j;
 	float   sum_weight, sum_profit;
+    int total = 0;
+    int max = 0;
+    int max_temp;
+    max_temp = max;
 
-	sum_weight = sum_profit = 0;
-	// Percorre todos os objectos
-	for (i=0; i < d.numGenes; i++)
-	{
-        // Verifica se o objecto i esta na mochila
-		if (sol[i] == 1)
-		{
-            // Actualiza o peso total
-			sum_weight += mat[i][0];
-            // Actualiza o lucro total
-			sum_profit += mat[i][1];
-		}
-	}
+    for(i=0; i<d.numGenes; i++){
+        for(j=0; j<d.numGenes;j++){
+            if(mat[i-1][j-1]==1 && i != j){
+                total = abs(sol[i]-sol[j]);
+                if(total > max)
+                    max = total;
+            }            
+        }
+    }
+
 	// Processo de reparacao
-    while (sum_weight > d.ar)
-    {
+    while (max >= d.numGenes){
         // escolhe um objeto aleatoriamente
         i = random_l_h(0, d.numGenes-1);
-        // Se esse objeto estiver na mochila, retira-o e ajusta os somat�rios do peso e lucro
-        if (sol[i] == 1)
-        {
-            sol[i] = 0;
-            sum_weight -= mat[i][0];
-            sum_profit -= mat[i][1];
+        // Se esse objeto estiver na mochila, retira-o e ajusta os somatórios do peso e lucro
+        for(j = 0;j<d.numGenes;j++){
+            if(mat[i-1][j-1] == 1 && i != j){
+                total = abs(sol[i]-sol[j]);
+                if(total > max && total < max_temp)
+                    max = total;
+            }
         }
     }
     *v = 1;
-	return sum_profit;
+	return max;
 }
 
 float eval_individual_reparado2(int sol[], struct info_evol d, int mat[][MAX_OBJ], int *v){
-	int     i, mv, pos;
+	int     i, j, j_max, i_max, mv, pos;
 	float   sum_weight, sum_profit;
+    int total = 0;
+    int max = 0;
+    int max_temp = max;
+    int rdm, tmp;
 
-	sum_weight = sum_profit = 0;
-	// Percorre todos os objectos
-	for (i=0; i < d.numGenes; i++)
-	{
-        // Verifica se o objecto i esta na mochila
-		if (sol[i] == 1)
-		{
-            // Actualiza o peso total
-			sum_weight += mat[i][0];
-            // Actualiza o lucro total
-			sum_profit += mat[i][1];
-		}
-	}
+    for(i=0; i<d.numGenes; i++){
+        for(j=0; j<d.numGenes;j++){
+            if(mat[i-1][j-1]==1 && i != j){
+                total = abs(sol[i]-sol[j]);
+                if(total > max)
+                    max = total;
+                    i_max = i;
+                    j_max = j;
+            }            
+        }
+    }
+
 	// Processo de reparacao 2
-    while (sum_weight > d.ar)
+    while (max >= d.numGenes)
     {
-        pos = -1;
-        for (i=0; i < d.numGenes; i++)
-        {
-            if (sol[i] == 1)
-            {
-                if  (pos == -1 || mv > mat[i][1])
-                {
-                    mv = mat[i][1];
-                    pos = i;
-                }
+        // Se esse objeto estiver na mochila, retira-o e ajusta os somatórios do peso e lucro
+        for(j = 0;j<d.numGenes;j++){
+            //Gera um número diferente que não esteja ocupado
+            do{
+                rdm = random_l_h(0, d.numGenes-1);
+            }while(rdm == i_max || rdm == j_max);
+
+            tmp = sol[j_max];
+            sol[j_max] = sol[rdm];
+            sol[rdm] = tmp;
+
+            if(mat[i_max-1][j-1] == 1 && i != j){
+                total = abs(sol[i_max]-sol[j_max]);
+                if(total > max && total < max_temp)
+                    max = total;
             }
         }
-        sol[pos] = 0;
-        sum_weight -= mat[pos][0];
-        sum_profit -= mat[pos][1];
     }
     *v = 1;
-	return sum_profit;
+	return max;
 }
 
 void eval(pchrom pop, struct info_evol d, int mat[][MAX_OBJ]){
@@ -286,13 +298,13 @@ void tournament(pchrom pop, struct info_evol d, pchrom parents){
 	int i, x1, x2;
 
 	// Realiza popsize torneios
-	for (i = 0; i < d.popsize; i++)
+	for (i=0; i<d.popsize;i++)
 	{
-		x1 = random_l_h(0, d.popsize - 1);
+		x1 = random_l_h(0, d.popsize-1);
 		do
-			x2 = random_l_h(0, d.popsize - 1);
-		while (x1 == x2);
-		if (pop[x1].fitness < pop[x2].fitness) // Problema de maximizacao
+			x2 = random_l_h(0, d.popsize-1);
+		while (x1==x2);
+		if (pop[x1].fitness < pop[x2].fitness)	// Problema de minimização
 			parents[i] = pop[x1];
 		else
 			parents[i] = pop[x2];
@@ -345,59 +357,54 @@ void genetic_operators(pchrom parents, struct info_evol d, pchrom offspring) {
 	//mutacao_por_troca(offspring, d);
 }
 
-void genetic_operators2(pchrom parents, struct info_evol d, pchrom offspring) {
-	// Recombinação com um ponto de corte
-	//crossover(parents, d, offspring);
-	// Recombinação com dois pontos de corte
-	// Exercício 4.4(a)
-	recombinacao_dois_pontos_corte(parents, d, offspring);
-	// Recombinação uniforme
-	// Exercício 4.4(b)
-	//recombinacao_uniforme(parents, d, offspring);
-	// Mutação binária
-	mutation(offspring, d);
-	// Mutação por troca
-	// Exercício 4.3
-	//mutacao_por_troca(offspring, d);
-}
-
-void genetic_operators3(pchrom parents, struct info_evol d, pchrom offspring) {
-	// Recombinação com um ponto de corte
-	//crossover(parents, d, offspring);
-	// Recombinação com dois pontos de corte
-	// Exercício 4.4(a)
-	//recombinacao_dois_pontos_corte(parents, d, offspring);
-	// Recombinação uniforme
-	// Exercício 4.4(b)
-	recombinacao_uniforme(parents, d, offspring);
-	// Mutação binária
-	mutation(offspring, d);
-	// Mutação por troca
-	// Exercício 4.3
-	//mutacao_por_troca(offspring, d);
-}
-
 void crossover(pchrom parents, struct info_evol d, pchrom offspring){
 	int i, j, point;
+	int flag[d.numGenes];
+	pchrom pai, mae;
+	int mask_pai[d.numGenes], mask_mae[d.numGenes];
 
-	for (i=0; i<d.popsize; i+=2)
-	{
-		if (rand_01() < d.pr)
-		{
-			point = random_l_h(0, d.numGenes-1);
-			for (j=0; j<point; j++)
-			{
-				offspring[i].p[j] = parents[i].p[j];
-				offspring[i+1].p[j] = parents[i+1].p[j];
+	for (i = 0; i < d.popsize; i += 2){
+		if (rand_01() < d.pr){
+			pai = &parents[i];
+			mae = &parents[i + 1];
+
+			//Reiniciar a flag (definir todos os números como disponíveis)
+			for (j = 0; j < d.numGenes; j++){
+				flag[j] = 0;
 			}
-			for (j=point; j<d.numGenes; j++)
-			{
-				offspring[i].p[j]= parents[i+1].p[j];
-				offspring[i+1].p[j] = parents[i].p[j];
+			//Gerar aleatóriamente uma mask para o pai e a inversa para a mãe (ex 11010 | 00101) -> Testado e a funcionar
+			for (j = 0; j < d.numGenes; j++){
+				mask_pai[j] = flip();
+				mask_mae[j] = (int)!mask_pai[j];
 			}
-		}
-		else
-		{
+			//Se a mae tiver uma fitness mais baixa, trocar (pai tem sempre a fitness mais baixa)
+			if (pai->fitness < mae->fitness){
+				const pchrom temp = pai;
+				pai = mae;
+				mae = temp;
+			}
+			//Offspring herda valores do pai, conforme a mask_pai
+			//Flag = 1 para todos os valores usados, impedindo assim repetidos.
+			for (j = 0; j < d.numGenes; j++){
+				if (mask_pai[j]){
+					offspring[i].p[j] = pai->p[j];
+					flag[pai->p[j]] = 1;
+				}
+			}
+			//Offspring herda valores restantes da mãe, conforme a mask_mae
+			//Caso o valor herdade da mãe seja repetido, continua a procurar por um valor disponível.
+			for (j = 0; j < d.numGenes; j++){
+				if (mask_mae[j]){
+					int k = mae->p[j];
+					while (flag[k]){
+						k++;
+						k = k % d.numGenes;
+					}
+					flag[k] = 1;
+					offspring[i].p[j] = k; 
+				}
+			}
+		}else{
 			offspring[i] = parents[i];
 			offspring[i+1] = parents[i+1];
 		}
@@ -520,11 +527,11 @@ struct info_evol init_data_evol(char *filename, int mat[][MAX_OBJ]){
 	fscanf(f,"%99[^\n]", lixo); //Ler o comentário e adicionar ao lixo.
 
 	// Atribuição dos parâmetros do problema
-	x.popsize = 100; 
+	x.popsize = 150; 
 	x.pm = 0.01;
-	x.pr = 1;
+	x.pr = 0.7;
 	x.tsize = 3;
-	x.numGenerations = 2000;
+	x.numGenerations = 2500;
 	
 	//x.numGenes = 100;
 	//x.capacity = 250;

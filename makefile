@@ -8,7 +8,8 @@ SRCS := $(wildcard *.c)
 BINS := main pLocal pEvol pHybrid
 
 all: main pLocal pEvol pHybrid
-	cp ${BINS} ~/IIA
+	cp ${BINS} ./testes
+	mkdir ./testes/out
 
 main: main.o
 	${CC} ${LINKERFLAG} $< -o $@

@@ -1,1 +1,2 @@
 void showMenu();
+void doTestes();

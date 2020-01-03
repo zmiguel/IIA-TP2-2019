@@ -16,11 +16,19 @@ int main(int argc, char *argv[]){
 	chrom       best_run, best_ever;
 	int         gen_actual, r, runs, i, inv, mat[MAX_OBJ][MAX_OBJ];
 	float       mbf = 0.0;
-    int         opt1=0;
+    int         opt1=0,tofile=0;
 
-    if(argc != 3){
-        printf("ERRO: numero de argumentos inválido\n%s <nome_ficheiro> <iteracoes>\n",argv[0]);
+    if(argc <= 3){
+        printf("ERRO: numero de argumentos inválido\n%s <nome_ficheiro> <iteracoes> [opt] [tofile (1)]\n",argv[0]);
         exit(1);
+    }
+
+	if(argc == 4){
+        opt1 = atoi(argv[3]);
+    }
+    if(argc == 5){
+        opt1 = atoi(argv[3]);
+        tofile=1;
     }
 
     strcpy(ficheiro,argv[1]);
@@ -29,13 +37,14 @@ int main(int argc, char *argv[]){
     prep_random();
 
     EA_param = init_data_hybrid(ficheiro, mat);
-	
-	printf("trepa colinas quando?:\n");
-	printf("1 - Inicio\n");
-	printf("2 - Meio\n");
-	printf("3 - Fim\n");
-	scanf("%d", &opt1);
-
+	fflush(stdin);
+    while(opt1<=0 || opt1 >3){
+		printf("trepa colinas quando?:\n");
+		printf("1 - Inicio\n");
+		printf("2 - Meio\n");
+		printf("3 - Fim\n");
+		scanf("%d", &opt1);
+	}
 
 
 	// Faz um ciclo com o número de execuções definidas
@@ -107,13 +116,26 @@ int main(int argc, char *argv[]){
 		free(pop);
 	}
 	// Escreve resultados globais
-	printf("\n\nMBF: %f\n", mbf/r);
-	printf("\nMelhor solucao encontrada");
-	write_best_hybrid(best_ever, EA_param);
+	if(tofile==1){
+		char fname[100];
+        sprintf(fname,"./out/pHybrid_%sitt_%s_opt%d",argv[2],argv[1],opt1);
+        FILE *f;
+        f = fopen(fname,"wt");
+        if(f==NULL){
+            printf("nao abri o ficheiro\n");
+        }
+		fprintf(f,"\n\nMBF: %f\n", mbf/r);
+		fprintf(f,"\nBest individual: %4.1f\n", best_ever.fitness);
+		fclose(f);
+	}else{
+		printf("\n\nMBF: %f\n", mbf/r);
+		printf("\nMelhor solucao encontrada");
+		write_best_hybrid(best_ever, EA_param);
+	}
 	return 0;
 }
 
-float eval_individual(int sol[], struct info_hybrid d, int mat[][1000], int *v){
+float eval_individual(int sol[], struct info_hybrid d, int mat[][MAX_OBJ], int *v){
 	int     i;
 	float   sum_weight, sum_profit;
 
@@ -144,7 +166,7 @@ float eval_individual(int sol[], struct info_hybrid d, int mat[][1000], int *v){
 	}
 }
 
-float eval_individual_penalizado(int sol[], struct info_hybrid d, int mat[][1000], int *v){
+float eval_individual_penalizado(int sol[], struct info_hybrid d, int mat[][MAX_OBJ], int *v){
 	int     i;
 	float   sum_weight, sum_profit;
 
@@ -178,7 +200,7 @@ float eval_individual_penalizado(int sol[], struct info_hybrid d, int mat[][1000
 	}
 }
 
-float eval_individual_reparado1(int sol[], struct info_hybrid d, int mat[][1000], int *v){
+float eval_individual_reparado1(int sol[], struct info_hybrid d, int mat[][MAX_OBJ], int *v){
 	int     i;
 	float   sum_weight, sum_profit;
 
@@ -212,7 +234,7 @@ float eval_individual_reparado1(int sol[], struct info_hybrid d, int mat[][1000]
 	return sum_profit;
 }
 
-float eval_individual_reparado2(int sol[], struct info_hybrid d, int mat[][1000], int *v){
+float eval_individual_reparado2(int sol[], struct info_hybrid d, int mat[][MAX_OBJ], int *v){
 	int     i, mv, pos;
 	float   sum_weight, sum_profit;
 
@@ -252,7 +274,7 @@ float eval_individual_reparado2(int sol[], struct info_hybrid d, int mat[][1000]
 	return sum_profit;
 }
 
-void eval(pchrom pop, struct info_hybrid d, int mat[][1000]){
+void eval(pchrom pop, struct info_hybrid d, int mat[][MAX_OBJ]){
 	int i;
 
 	for (i=0; i<d.popsize; i++)
@@ -265,7 +287,7 @@ void eval(pchrom pop, struct info_hybrid d, int mat[][1000]){
         //pop[i].fitness = eval_individual_reparado2(pop[i].p, d, mat, &pop[i].valido);
 }
 
-void eval2(pchrom pop, struct info_hybrid d, int mat[][1000]){
+void eval2(pchrom pop, struct info_hybrid d, int mat[][MAX_OBJ]){
 	int i;
 
 	for (i=0; i<d.popsize; i++)
@@ -278,7 +300,7 @@ void eval2(pchrom pop, struct info_hybrid d, int mat[][1000]){
         //pop[i].fitness = eval_individual_reparado2(pop[i].p, d, mat, &pop[i].valido);
 }
 
-void eval3(pchrom pop, struct info_hybrid d, int mat[][1000]){
+void eval3(pchrom pop, struct info_hybrid d, int mat[][MAX_OBJ]){
 	int i;
 
 	for (i=0; i<d.popsize; i++)
@@ -291,7 +313,7 @@ void eval3(pchrom pop, struct info_hybrid d, int mat[][1000]){
         //pop[i].fitness = eval_individual_reparado2(pop[i].p, d, mat, &pop[i].valido);
 }
 
-void eval4(pchrom pop, struct info_hybrid d, int mat[][1000]){
+void eval4(pchrom pop, struct info_hybrid d, int mat[][MAX_OBJ]){
 	int i;
 
 	for (i=0; i<d.popsize; i++)
@@ -304,7 +326,7 @@ void eval4(pchrom pop, struct info_hybrid d, int mat[][1000]){
         pop[i].fitness = eval_individual_reparado2(pop[i].p, d, mat, &pop[i].valido);
 }
 
-void gera_vizinho(int sol[], int solViz[], int mat[][1000], int nGenes){
+void gera_vizinho(int sol[], int solViz[], int mat[][MAX_OBJ], int nGenes){
     int i, menorCustoIn, maiorCustoOut, p1, p2;
 
     // Copia a solução para a solução vizinha
@@ -338,7 +360,7 @@ void gera_vizinho(int sol[], int solViz[], int mat[][1000], int nGenes){
     }
 }
 
-void trepa_colinas(pchrom pop, struct info_hybrid d, int mat[][1000]){
+void trepa_colinas(pchrom pop, struct info_hybrid d, int mat[][MAX_OBJ]){
     int     i, j;
     chrom   vizinho;
 
@@ -418,59 +440,54 @@ void genetic_operators(pchrom parents, struct info_hybrid d, pchrom offspring){
 	//mutacao_por_troca(offspring, d);
 }
 
-void genetic_operators2(pchrom parents, struct info_hybrid d, pchrom offspring){
-    // Recombinação com um ponto de corte
-	//crossover(parents, d, offspring);
-    // Recombinação com dois pontos de corte
-    // Exercício 4.4(a)
-	recombinacao_dois_pontos_corte(parents, d, offspring);
-    // Recombinação uniforme
-    // Exercício 4.4(b)
-	//recombinacao_uniforme(parents, d, offspring);
-    // Mutação binária
-	mutation(offspring, d);
-    // Mutação por troca
-    // Exercício 4.3
-	//mutacao_por_troca(offspring, d);
-}
-
-void genetic_operators3(pchrom parents, struct info_hybrid d, pchrom offspring){
-    // Recombinação com um ponto de corte
-	//crossover(parents, d, offspring);
-    // Recombinação com dois pontos de corte
-    // Exercício 4.4(a)
-	//recombinacao_dois_pontos_corte(parents, d, offspring);
-    // Recombinação uniforme
-    // Exercício 4.4(b)
-	recombinacao_uniforme(parents, d, offspring);
-    // Mutação binária
-	mutation(offspring, d);
-    // Mutação por troca
-    // Exercício 4.3
-	//mutacao_por_troca(offspring, d);
-}
-
 void crossover(pchrom parents, struct info_hybrid d, pchrom offspring){
 	int i, j, point;
+	int flag[d.numGenes];
+	pchrom pai, mae;
+	int mask_pai[d.numGenes], mask_mae[d.numGenes];
 
-	for (i=0; i<d.popsize; i+=2)
-	{
-		if (rand_01() < d.pr)
-		{
-			point = random_l_h(0, d.numGenes-1);
-			for (j=0; j<point; j++)
-			{
-				offspring[i].p[j] = parents[i].p[j];
-				offspring[i+1].p[j] = parents[i+1].p[j];
+	for (i = 0; i < d.popsize; i += 2){
+		if (rand_01() < d.pr){
+			pai = &parents[i];
+			mae = &parents[i + 1];
+
+			//Reiniciar a flag (definir todos os números como disponíveis)
+			for (j = 0; j < d.numGenes; j++){
+				flag[j] = 0;
 			}
-			for (j=point; j<d.numGenes; j++)
-			{
-				offspring[i].p[j]= parents[i+1].p[j];
-				offspring[i+1].p[j] = parents[i].p[j];
+			//Gerar aleatóriamente uma mask para o pai e a inversa para a mãe (ex 11010 | 00101) -> Testado e a funcionar
+			for (j = 0; j < d.numGenes; j++){
+				mask_pai[j] = flip();
+				mask_mae[j] = (int)!mask_pai[j];
 			}
-		}
-		else
-		{
+			//Se a mae tiver uma fitness mais baixa, trocar (pai tem sempre a fitness mais baixa)
+			if (pai->fitness < mae->fitness){
+				const pchrom temp = pai;
+				pai = mae;
+				mae = temp;
+			}
+			//Offspring herda valores do pai, conforme a mask_pai
+			//Flag = 1 para todos os valores usados, impedindo assim repetidos.
+			for (j = 0; j < d.numGenes; j++){
+				if (mask_pai[j]){
+					offspring[i].p[j] = pai->p[j];
+					flag[pai->p[j]] = 1;
+				}
+			}
+			//Offspring herda valores restantes da mãe, conforme a mask_mae
+			//Caso o valor herdade da mãe seja repetido, continua a procurar por um valor disponível.
+			for (j = 0; j < d.numGenes; j++){
+				if (mask_mae[j]){
+					int k = mae->p[j];
+					while (flag[k]){
+						k++;
+						k = k % d.numGenes;
+					}
+					flag[k] = 1;
+					offspring[i].p[j] = k; 
+				}
+			}
+		}else{
 			offspring[i] = parents[i];
 			offspring[i+1] = parents[i+1];
 		}
@@ -566,7 +583,7 @@ void mutacao_por_troca(pchrom offspring, struct info_hybrid d){
         }
 }
 
-struct info_hybrid init_data_hybrid(char *filename, int mat[][1000]){
+struct info_hybrid init_data_hybrid(char *filename, int mat[][MAX_OBJ]){
 	struct  info_hybrid x;
 	FILE    *f;
 	int     i;

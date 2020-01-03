@@ -39,8 +39,6 @@ void eval3(pchrom pop, struct info_evol d, int mat[][MAX_OBJ]);
 void tournament(pchrom pop, struct info_evol d, pchrom parents);
 void tournament_geral(pchrom pop, struct info_evol d, pchrom parents);
 void genetic_operators(pchrom parents, struct info_evol d, pchrom offspring);
-void genetic_operators2(pchrom parents, struct info_evol d, pchrom offspring);
-void genetic_operators3(pchrom parents, struct info_evol d, pchrom offspring);
 void crossover(pchrom parents, struct info_evol d, pchrom offspring);
 void recombinacao_dois_pontos_corte(pchrom parents, struct info_evol d, pchrom offspring);
 void recombinacao_uniforme(pchrom parents, struct info_evol d, pchrom offspring);

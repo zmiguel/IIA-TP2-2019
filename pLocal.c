@@ -7,17 +7,25 @@
 
 int main(int argc, char *argv[]){
     char ficheiro[100];
-	int vert, itr, k, runs, custo, bCusto, opt=0;
+	int vert, itr, k, runs, custo, bCusto, opt=0, tofile=0;
 	int *matrix, *sol, *best;
 	float mbf = 0.0;
 
-    if(argc != 3){
-        printf("ERRO: numero de argumentos inválido!\n");
+    if(argc <= 3){
+        printf("ERRO: numero de argumentos inválido\n%s <nome_ficheiro> <iteracoes> [opt] [tofile (1)]\n",argv[0]);
         exit(1);
     }
 
     strcpy(ficheiro,argv[1]);
     runs = atoi(argv[2]);
+
+    if(argc == 4){
+        opt = atoi(argv[3]);
+    }
+    if(argc == 5){
+        opt = atoi(argv[3]);
+        tofile=1;
+    }
 
     prep_random();
 
@@ -31,11 +39,13 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 	fflush(stdin);
-    do{
-		printf("vizinhança 1 ou 2?: ");
-		scanf("%d", &opt);
-	}while(opt != 1 && opt != 2);
-
+    if(opt != 1 && opt != 2){
+        do{
+            printf("vizinhança 1 ou 2?: ");
+            scanf("%d", &opt);
+        }while(opt != 1 && opt != 2);
+    }
+    
     for (k = 0; k < runs; k++)
 	{
 		// Gerar solini
@@ -63,13 +73,27 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	printf("\n");
-	printf("\nMBF: %f\n", mbf / k);
-	
-	printf("Iterações: %d\n File: %s \n", atoi(argv[2]), argv[1]);
-	printf("\nMelhor solucao encontrada:\n");
-	pSol_local(best, vert);
-	printf("Custo final: %2d\n", bCusto);
+    if(tofile==1){
+        char fname[100];
+        sprintf(fname,"./out/pLocal_%sitt_%s_opt%d",argv[2],argv[1],opt);
+        FILE *f;
+        f = fopen(fname,"wt");
+        if(f==NULL){
+            printf("nao abri o ficheiro\n");
+        }
+        fprintf(f,"MBF: %f\n", mbf / k);
+        fprintf(f,"Iterações: %d\nFile: %s \n", atoi(argv[2]), argv[1]);
+        fprintf(f,"Custo final: %2d\n", bCusto);
+        fclose(f);
+    }else{
+        printf("\n");
+        printf("\nMBF: %f\n", mbf / k);
+        
+        printf("Iterações: %d\nFile: %s \n", atoi(argv[2]), argv[1]);
+        printf("\nMelhor solucao encontrada:\n");
+        pSol_local(best, vert);
+        printf("Custo final: %2d\n", bCusto);
+    }
 	free(matrix);
 	free(sol);
 	free(best);
